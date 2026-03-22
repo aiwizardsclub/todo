@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { todoApi, categoryApi, tagApi } from "@/lib/api";
 import { useState } from "react";
-import type { TodoFilters, TodoStatus, TodoPriority } from "@/types";
+import { TodoFilters, TodoStatus, TodoPriority } from "@/types";
 
 export default function DashboardPage() {
   const { user, loading: authLoading, logout, isAuthenticated } = useAuth();
