@@ -24,7 +24,7 @@ export default function DashboardPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    priority: "medium" as TodoPriority,
+    priority: TodoPriority.MEDIUM,
     due_date: "",
     category_id: "",
     tag_ids: [] as string[],
@@ -89,7 +89,7 @@ export default function DashboardPage() {
       setFormData({
         title: "",
         description: "",
-        priority: "medium",
+        priority: TodoPriority.MEDIUM,
         due_date: "",
         category_id: "",
         tag_ids: [],
