@@ -24,3 +24,9 @@ redis==5.2.1
 
 # Environment
 python-dotenv==1.0.1
+
+# Background Tasks & Scheduling
+apscheduler==3.10.4
+
+# Email Service
+resend==2.7.0
