@@ -203,18 +203,18 @@ export default function DashboardPage() {
                   <div className="flex items-start gap-4 flex-1">
                     <input
                       type="checkbox"
-                      checked={todo.status === "completed"}
+                      checked={todo.status === TodoStatus.COMPLETED}
                       onChange={() =>
                         toggleStatusMutation.mutate({
                           id: todo.id,
-                          status: todo.status === "completed" ? "pending" : "completed",
+                          status: todo.status === TodoStatus.COMPLETED ? TodoStatus.PENDING : TodoStatus.COMPLETED,
                         })
                       }
                       className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                     />
                     <div className="flex-1">
                       <h3 className={`text-lg font-semibold ${
-                        todo.status === "completed" ? "line-through text-gray-500" : "text-gray-900"
+                        todo.status === TodoStatus.COMPLETED ? "line-through text-gray-500" : "text-gray-900"
                       }`}>
                         {todo.title}
                       </h3>
@@ -223,8 +223,8 @@ export default function DashboardPage() {
                       )}
                       <div className="flex flex-wrap gap-2 mt-3">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          todo.priority === "high" ? "bg-red-100 text-red-700" :
-                          todo.priority === "medium" ? "bg-yellow-100 text-yellow-700" :
+                          todo.priority === TodoPriority.HIGH ? "bg-red-100 text-red-700" :
+                          todo.priority === TodoPriority.MEDIUM ? "bg-yellow-100 text-yellow-700" :
                           "bg-green-100 text-green-700"
                         }`}>
                           {todo.priority}
