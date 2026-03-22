@@ -151,10 +151,14 @@ async def create_todo(
         todo.tags = list(tags)
 
     await db.commit()
-    await db.refresh(todo)
 
-    # Load relationships
-    await db.refresh(todo, ['category', 'tags'])
+    # Reload with relationships eagerly loaded
+    result = await db.execute(
+        select(Todo)
+        .where(Todo.id == todo.id)
+        .options(selectinload(Todo.category), selectinload(Todo.tags))
+    )
+    todo = result.scalar_one()
 
     return todo
 
