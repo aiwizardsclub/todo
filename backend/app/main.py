@@ -14,13 +14,10 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
-# Configure CORS - Production configuration
+# Configure CORS - Use environment variable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Local development
-        "https://todo-theta-azure-89.vercel.app",  # Vercel production
-    ],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,  # Allow credentials for JWT tokens
     allow_methods=["*"],
     allow_headers=["*"],
