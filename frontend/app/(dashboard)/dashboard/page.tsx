@@ -128,14 +128,12 @@ export default function DashboardPage() {
     createTodoMutation.mutate(formData);
   };
 
-  const handleCreateCategory = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateCategory = () => {
     if (!newCategoryName.trim()) return;
     createCategoryMutation.mutate(newCategoryName);
   };
 
-  const handleCreateTag = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateTag = () => {
     if (!newTagName.trim()) return;
     createTagMutation.mutate(newTagName);
   };
@@ -410,17 +408,24 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   {showCategoryForm ? (
-                    <form onSubmit={handleCreateCategory} className="flex gap-2 mb-2">
+                    <div className="flex gap-2 mb-2">
                       <input
                         type="text"
                         value={newCategoryName}
                         onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateCategory();
+                          }
+                        }}
                         placeholder="Category name"
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autoFocus
                       />
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleCreateCategory}
                         disabled={createCategoryMutation.isPending}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                       >
@@ -433,7 +438,7 @@ export default function DashboardPage() {
                       >
                         Cancel
                       </button>
-                    </form>
+                    </div>
                   ) : null}
                   <select
                     value={formData.category_id}
@@ -463,17 +468,24 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   {showTagForm ? (
-                    <form onSubmit={handleCreateTag} className="flex gap-2 mb-2">
+                    <div className="flex gap-2 mb-2">
                       <input
                         type="text"
                         value={newTagName}
                         onChange={(e) => setNewTagName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleCreateTag();
+                          }
+                        }}
                         placeholder="Tag name"
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         autoFocus
                       />
                       <button
-                        type="submit"
+                        type="button"
+                        onClick={handleCreateTag}
                         disabled={createTagMutation.isPending}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                       >
@@ -486,7 +498,7 @@ export default function DashboardPage() {
                       >
                         Cancel
                       </button>
-                    </form>
+                    </div>
                   ) : null}
                   <div className="flex flex-wrap gap-2">
                     {tags?.map((tag) => (

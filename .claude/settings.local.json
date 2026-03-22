@@ -13,7 +13,9 @@
       "Bash(taskkill:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(source:*)",
+      "Bash(uvicorn app.main:app:*)"
     ]
   }
 }
