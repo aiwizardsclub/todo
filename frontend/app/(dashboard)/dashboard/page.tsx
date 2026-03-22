@@ -30,6 +30,11 @@ export default function DashboardPage() {
     tag_ids: [] as string[],
   });
 
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [showTagForm, setShowTagForm] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -97,10 +102,42 @@ export default function DashboardPage() {
     },
   });
 
+  // Create category mutation
+  const createCategoryMutation = useMutation({
+    mutationFn: (name: string) => categoryApi.createCategory({ name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      setNewCategoryName("");
+      setShowCategoryForm(false);
+    },
+  });
+
+  // Create tag mutation
+  const createTagMutation = useMutation({
+    mutationFn: (name: string) => tagApi.createTag({ name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      setNewTagName("");
+      setShowTagForm(false);
+    },
+  });
+
   const handleCreateTodo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title.trim()) return;
     createTodoMutation.mutate(formData);
+  };
+
+  const handleCreateCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+    createCategoryMutation.mutate(newCategoryName);
+  };
+
+  const handleCreateTag = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagName.trim()) return;
+    createTagMutation.mutate(newTagName);
   };
 
   if (authLoading || !isAuthenticated) {
@@ -360,9 +397,44 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Category
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCategoryForm(!showCategoryForm)}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      + Add Category
+                    </button>
+                  </div>
+                  {showCategoryForm ? (
+                    <form onSubmit={handleCreateCategory} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Category name"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={createCategoryMutation.isPending}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {createCategoryMutation.isPending ? "..." : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowCategoryForm(false); setNewCategoryName(""); }}
+                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  ) : null}
                   <select
                     value={formData.category_id}
                     onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
@@ -378,9 +450,44 @@ export default function DashboardPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tags
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Tags
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowTagForm(!showTagForm)}
+                      className="text-sm text-blue-600 hover:text-blue-700"
+                    >
+                      + Add Tag
+                    </button>
+                  </div>
+                  {showTagForm ? (
+                    <form onSubmit={handleCreateTag} className="flex gap-2 mb-2">
+                      <input
+                        type="text"
+                        value={newTagName}
+                        onChange={(e) => setNewTagName(e.target.value)}
+                        placeholder="Tag name"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={createTagMutation.isPending}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {createTagMutation.isPending ? "..." : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowTagForm(false); setNewTagName(""); }}
+                        className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </form>
+                  ) : null}
                   <div className="flex flex-wrap gap-2">
                     {tags?.map((tag) => (
                       <label key={tag.id} className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
@@ -400,7 +507,7 @@ export default function DashboardPage() {
                       </label>
                     ))}
                     {(!tags || tags.length === 0) && (
-                      <p className="text-sm text-gray-500">No tags available. Create tags first!</p>
+                      <p className="text-sm text-gray-500">No tags available. Click &quot;+ Add Tag&quot; to create one!</p>
                     )}
                   </div>
                 </div>
