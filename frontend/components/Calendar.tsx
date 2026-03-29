@@ -33,6 +33,7 @@ interface CalendarProps {
   onViewChange: (view: CalendarView) => void;
   currentDate: Date;
   onDateChange: (date: Date) => void;
+  onDayClick?: (date: Date) => void;
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -268,7 +269,7 @@ function HoverDay({
 }
 
 // ─── Monthly View ───────────────────────────────────────────────
-function MonthView({ todos, currentDate }: { todos: Todo[]; currentDate: Date }) {
+function MonthView({ todos, currentDate, onDayClick }: { todos: Todo[]; currentDate: Date; onDayClick?: (date: Date) => void }) {
   const days = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -295,9 +296,10 @@ function MonthView({ todos, currentDate }: { todos: Todo[]; currentDate: Date })
           return (
             <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
               <div
-                className={`border border-gray-100 p-1.5 h-full transition-colors ${
+                onClick={() => onDayClick?.(day)}
+                className={`border border-gray-100 p-1.5 h-full transition-colors cursor-pointer ${
                   !inMonth ? "bg-gray-50" : "bg-white"
-                } ${dayTodos.length > 0 ? "hover:bg-blue-50/50 cursor-pointer" : ""}`}
+                } hover:bg-blue-50/50`}
               >
                 <div className="flex items-center justify-between mb-1">
                   <span
@@ -346,7 +348,7 @@ function MonthView({ todos, currentDate }: { todos: Todo[]; currentDate: Date })
 }
 
 // ─── Weekly View ────────────────────────────────────────────────
-function WeekView({ todos, currentDate }: { todos: Todo[]; currentDate: Date }) {
+function WeekView({ todos, currentDate, onDayClick }: { todos: Todo[]; currentDate: Date; onDayClick?: (date: Date) => void }) {
   const days = useMemo(() => {
     const weekStart = startOfWeek(currentDate);
     const weekEnd = endOfWeek(currentDate);
@@ -361,7 +363,10 @@ function WeekView({ todos, currentDate }: { todos: Todo[]; currentDate: Date }) 
 
         return (
           <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
-            <div className={`min-h-[280px] ${dayTodos.length > 0 ? "cursor-pointer" : ""}`}>
+            <div
+              onClick={() => onDayClick?.(day)}
+              className="min-h-[280px] cursor-pointer"
+            >
               <div
                 className={`text-center py-3 rounded-t-lg ${
                   today ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
@@ -410,10 +415,12 @@ function YearView({
   todos,
   currentDate,
   onMonthClick,
+  onDayClick,
 }: {
   todos: Todo[];
   currentDate: Date;
   onMonthClick: (date: Date) => void;
+  onDayClick?: (date: Date) => void;
 }) {
   const months = useMemo(() => {
     const yearStart = startOfYear(currentDate);
@@ -463,10 +470,18 @@ function YearView({
 
                 return (
                   <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
-                    <div className="flex items-center justify-center h-5">
+                    <div
+                      className="flex items-center justify-center h-5"
+                      onClick={(e) => {
+                        if (inMonth && onDayClick) {
+                          e.stopPropagation();
+                          onDayClick(day);
+                        }
+                      }}
+                    >
                       {inMonth ? (
                         <span
-                          className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] ${
+                          className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] cursor-pointer hover:ring-2 hover:ring-blue-300 ${
                             today
                               ? "bg-blue-600 text-white font-bold"
                               : hasTasks
@@ -500,6 +515,7 @@ export default function Calendar({
   onViewChange,
   currentDate,
   onDateChange,
+  onDayClick,
 }: CalendarProps) {
   const handlePrev = () => {
     if (view === "month") onDateChange(subMonths(currentDate, 1));
@@ -579,10 +595,10 @@ export default function Calendar({
 
       {/* Calendar Body */}
       <div className="bg-white rounded-lg shadow overflow-visible">
-        {view === "month" && <MonthView todos={todos} currentDate={currentDate} />}
-        {view === "week" && <WeekView todos={todos} currentDate={currentDate} />}
+        {view === "month" && <MonthView todos={todos} currentDate={currentDate} onDayClick={onDayClick} />}
+        {view === "week" && <WeekView todos={todos} currentDate={currentDate} onDayClick={onDayClick} />}
         {view === "year" && (
-          <YearView todos={todos} currentDate={currentDate} onMonthClick={handleMonthClick} />
+          <YearView todos={todos} currentDate={currentDate} onMonthClick={handleMonthClick} onDayClick={onDayClick} />
         )}
       </div>
     </div>
