@@ -19,9 +19,7 @@ export default function CalendarPage() {
     queryFn: () =>
       todoApi.getTodos({
         page: 1,
-        page_size: 200,
-        sort_by: "due_date",
-        sort_order: "asc",
+        page_size: 100,
       }),
     enabled: isAuthenticated,
     staleTime: 30 * 1000,
@@ -54,9 +52,9 @@ export default function CalendarPage() {
 
   // Group tasks by status for sidebar
   const tasksByStatus = useMemo(() => {
-    const pending = todos.filter((t) => t.status === TodoStatus.PENDING && t.due_date);
-    const inProgress = todos.filter((t) => t.status === TodoStatus.IN_PROGRESS && t.due_date);
-    const completed = todos.filter((t) => t.status === TodoStatus.COMPLETED && t.due_date);
+    const pending = todos.filter((t) => t.status === TodoStatus.PENDING);
+    const inProgress = todos.filter((t) => t.status === TodoStatus.IN_PROGRESS);
+    const completed = todos.filter((t) => t.status === TodoStatus.COMPLETED);
     return { pending, inProgress, completed };
   }, [todos]);
 
