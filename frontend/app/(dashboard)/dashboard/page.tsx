@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { todoApi, categoryApi, tagApi } from "@/lib/api";
 import { useState } from "react";
 import { TodoFilters, TodoStatus, TodoPriority } from "@/types";
 
 export default function DashboardPage() {
-  const { user, loading: authLoading, logout, isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
   const [filters, setFilters] = useState<TodoFilters>({
@@ -34,13 +31,6 @@ export default function DashboardPage() {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [showTagForm, setShowTagForm] = useState(false);
   const [newTagName, setNewTagName] = useState("");
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [authLoading, isAuthenticated, router]);
 
   // Fetch todos
   const { data: todos, isLoading: todosLoading } = useQuery({
@@ -138,189 +128,156 @@ export default function DashboardPage() {
     createTagMutation.mutate(newTagName);
   };
 
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              TODO App
-            </h1>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.username}!
-              </span>
-              <button
-                onClick={logout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">My Tasks</h2>
+          <p className="text-gray-600 mt-1">
+            {todos?.total || 0} total tasks
+          </p>
         </div>
-      </header>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+        >
+          + Create Task
+        </button>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">My Tasks</h2>
-            <p className="text-gray-600 mt-1">
-              {todos?.total || 0} total tasks
-            </p>
-          </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+      {/* Filter Bar */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="flex flex-wrap gap-4">
+          <select
+            value={filters.status || ""}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value as TodoStatus || undefined })}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            + Create Task
-          </button>
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+
+          <select
+            value={filters.priority || ""}
+            onChange={(e) => setFilters({ ...filters, priority: e.target.value as TodoPriority || undefined })}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={filters.search || ""}
+            onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
+      </div>
 
-        {/* Filter Bar */}
-        <div className="bg-white rounded-lg shadow p-4 mb-6">
-          <div className="flex flex-wrap gap-4">
-            <select
-              value={filters.status || ""}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as TodoStatus || undefined })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-
-            <select
-              value={filters.priority || ""}
-              onChange={(e) => setFilters({ ...filters, priority: e.target.value as TodoPriority || undefined })}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={filters.search || ""}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value || undefined })}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+      {/* TODO List */}
+      <div className="space-y-4">
+        {todosLoading ? (
+          <div className="text-center py-12">
+            <div className="text-gray-600">Loading tasks...</div>
           </div>
-        </div>
-
-        {/* TODO List */}
-        <div className="space-y-4">
-          {todosLoading ? (
-            <div className="text-center py-12">
-              <div className="text-gray-600">Loading tasks...</div>
-            </div>
-          ) : todos && todos.items.length > 0 ? (
-            todos.items.map((todo) => (
-              <div
-                key={todo.id}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <input
-                      type="checkbox"
-                      checked={todo.status === TodoStatus.COMPLETED}
-                      onChange={() =>
-                        toggleStatusMutation.mutate({
-                          id: todo.id,
-                          status: todo.status === TodoStatus.COMPLETED ? TodoStatus.PENDING : TodoStatus.COMPLETED,
-                        })
-                      }
-                      className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <h3 className={`text-lg font-semibold ${
-                        todo.status === TodoStatus.COMPLETED ? "line-through text-gray-500" : "text-gray-900"
+        ) : todos && todos.items.length > 0 ? (
+          todos.items.map((todo) => (
+            <div
+              key={todo.id}
+              className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1">
+                  <input
+                    type="checkbox"
+                    checked={todo.status === TodoStatus.COMPLETED}
+                    onChange={() =>
+                      toggleStatusMutation.mutate({
+                        id: todo.id,
+                        status: todo.status === TodoStatus.COMPLETED ? TodoStatus.PENDING : TodoStatus.COMPLETED,
+                      })
+                    }
+                    className="mt-1 w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <div className="flex-1">
+                    <h3 className={`text-lg font-semibold ${
+                      todo.status === TodoStatus.COMPLETED ? "line-through text-gray-500" : "text-gray-900"
+                    }`}>
+                      {todo.title}
+                    </h3>
+                    {todo.description && (
+                      <p className="text-gray-600 mt-1">{todo.description}</p>
+                    )}
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        todo.priority === TodoPriority.HIGH ? "bg-red-100 text-red-700" :
+                        todo.priority === TodoPriority.MEDIUM ? "bg-yellow-100 text-yellow-700" :
+                        "bg-green-100 text-green-700"
                       }`}>
-                        {todo.title}
-                      </h3>
-                      {todo.description && (
-                        <p className="text-gray-600 mt-1">{todo.description}</p>
-                      )}
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          todo.priority === TodoPriority.HIGH ? "bg-red-100 text-red-700" :
-                          todo.priority === TodoPriority.MEDIUM ? "bg-yellow-100 text-yellow-700" :
-                          "bg-green-100 text-green-700"
-                        }`}>
-                          {todo.priority}
+                        {todo.priority}
+                      </span>
+                      {todo.category && (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
+                          {todo.category.name}
                         </span>
-                        {todo.category && (
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-                            {todo.category.name}
-                          </span>
-                        )}
-                        {todo.tags.map((tag) => (
-                          <span key={tag.id} className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
-                            #{tag.name}
-                          </span>
-                        ))}
-                      </div>
+                      )}
+                      {todo.tags.map((tag) => (
+                        <span key={tag.id} className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-700">
+                          #{tag.name}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      if (confirm("Are you sure you want to delete this task?")) {
-                        deleteTodoMutation.mutate(todo.id);
-                      }
-                    }}
-                    className="text-red-600 hover:text-red-700 px-3 py-1 rounded hover:bg-red-50 transition-colors"
-                  >
-                    Delete
-                  </button>
                 </div>
+                <button
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this task?")) {
+                      deleteTodoMutation.mutate(todo.id);
+                    }
+                  }}
+                  className="text-red-600 hover:text-red-700 px-3 py-1 rounded hover:bg-red-50 transition-colors"
+                >
+                  Delete
+                </button>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <p className="text-gray-600 text-lg">No tasks found</p>
-              <p className="text-gray-500 text-sm mt-2">Create your first task to get started!</p>
             </div>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {todos && todos.total_pages > 1 && (
-          <div className="mt-6 flex justify-center gap-2">
-            <button
-              onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
-              disabled={(filters.page || 1) === 1}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2 text-gray-700">
-              Page {filters.page || 1} of {todos.total_pages}
-            </span>
-            <button
-              onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
-              disabled={(filters.page || 1) >= todos.total_pages}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
+          ))
+        ) : (
+          <div className="text-center py-12 bg-white rounded-lg shadow">
+            <p className="text-gray-600 text-lg">No tasks found</p>
+            <p className="text-gray-500 text-sm mt-2">Create your first task to get started!</p>
           </div>
         )}
-      </main>
+      </div>
+
+      {/* Pagination */}
+      {todos && todos.total_pages > 1 && (
+        <div className="mt-6 flex justify-center gap-2">
+          <button
+            onClick={() => setFilters({ ...filters, page: (filters.page || 1) - 1 })}
+            disabled={(filters.page || 1) === 1}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 text-gray-700">
+            Page {filters.page || 1} of {todos.total_pages}
+          </span>
+          <button
+            onClick={() => setFilters({ ...filters, page: (filters.page || 1) + 1 })}
+            disabled={(filters.page || 1) >= todos.total_pages}
+            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Create TODO Modal */}
       {isCreateModalOpen && (
@@ -333,7 +290,7 @@ export default function DashboardPage() {
                   onClick={() => setIsCreateModalOpen(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
-                  ×
+                  x
                 </button>
               </div>
 
@@ -545,6 +502,6 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 }
