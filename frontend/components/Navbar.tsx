@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 
 const navLinks = [
-  { href: "/", label: "Home" },
   { href: "/dashboard", label: "Todos" },
   { href: "/calendar", label: "Calendar" },
   { href: "/categories", label: "Categories" },
@@ -31,10 +30,7 @@ export default function Navbar() {
             </Link>
             <nav className="hidden sm:flex items-center gap-1">
               {navLinks.map((link) => {
-                const isActive =
-                  link.href === "/"
-                    ? pathname === "/"
-                    : pathname.startsWith(link.href);
+                const isActive = pathname.startsWith(link.href);
                 return (
                   <Link
                     key={link.href}

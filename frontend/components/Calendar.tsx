@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import {
   format,
   startOfMonth,
@@ -50,9 +50,220 @@ function getPriorityColor(priority: TodoPriority) {
   }
 }
 
+function getPriorityDot(priority: TodoPriority) {
+  switch (priority) {
+    case TodoPriority.HIGH:
+      return "bg-red-500";
+    case TodoPriority.MEDIUM:
+      return "bg-yellow-500";
+    case TodoPriority.LOW:
+      return "bg-green-500";
+    default:
+      return "bg-gray-500";
+  }
+}
+
+function getStatusLabel(status: TodoStatus) {
+  switch (status) {
+    case TodoStatus.COMPLETED:
+      return "Completed";
+    case TodoStatus.IN_PROGRESS:
+      return "In Progress";
+    case TodoStatus.PENDING:
+      return "Pending";
+    default:
+      return status;
+  }
+}
+
+function getStatusColor(status: TodoStatus) {
+  switch (status) {
+    case TodoStatus.COMPLETED:
+      return "text-green-600";
+    case TodoStatus.IN_PROGRESS:
+      return "text-blue-600";
+    case TodoStatus.PENDING:
+      return "text-yellow-600";
+    default:
+      return "text-gray-600";
+  }
+}
+
 function getTodosForDay(todos: Todo[], day: Date): Todo[] {
   return todos.filter(
     (todo) => todo.due_date && isSameDay(parseISO(todo.due_date), day)
+  );
+}
+
+// ─── Hover Tooltip ──────────────────────────────────────────────
+function DayTooltip({
+  todos,
+  day,
+  anchorRef,
+  onClose,
+}: {
+  todos: Todo[];
+  day: Date;
+  anchorRef: HTMLElement | null;
+  onClose: () => void;
+}) {
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!anchorRef || !tooltipRef.current) return;
+    const rect = anchorRef.getBoundingClientRect();
+    const tooltip = tooltipRef.current.getBoundingClientRect();
+    const viewW = window.innerWidth;
+    const viewH = window.innerHeight;
+
+    let top = rect.bottom + 8;
+    let left = rect.left + rect.width / 2 - tooltip.width / 2;
+
+    if (top + tooltip.height > viewH - 20) top = rect.top - tooltip.height - 8;
+    if (left < 10) left = 10;
+    if (left + tooltip.width > viewW - 10) left = viewW - tooltip.width - 10;
+
+    setPos({ top, left });
+  }, [anchorRef]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        tooltipRef.current &&
+        !tooltipRef.current.contains(e.target as Node) &&
+        anchorRef &&
+        !anchorRef.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [anchorRef, onClose]);
+
+  // Group by status
+  const grouped = useMemo(() => {
+    const map: Record<string, Todo[]> = {};
+    todos.forEach((t) => {
+      const key = t.status;
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+    });
+    return map;
+  }, [todos]);
+
+  const statusOrder = [TodoStatus.PENDING, TodoStatus.IN_PROGRESS, TodoStatus.COMPLETED];
+
+  return (
+    <div
+      ref={tooltipRef}
+      className="fixed z-50 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-in fade-in duration-150"
+      style={{ top: pos.top, left: pos.left }}
+    >
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3">
+        <div className="text-white font-semibold text-sm">
+          {format(day, "EEEE, MMM d, yyyy")}
+        </div>
+        <div className="text-blue-100 text-xs mt-0.5">
+          {todos.length} task{todos.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      {/* Tasks grouped by status */}
+      <div className="max-h-64 overflow-y-auto">
+        {statusOrder.map((status) => {
+          const items = grouped[status];
+          if (!items || items.length === 0) return null;
+          return (
+            <div key={status}>
+              <div className="px-4 py-1.5 bg-gray-50 border-b border-gray-100">
+                <span className={`text-xs font-semibold uppercase ${getStatusColor(status)}`}>
+                  {getStatusLabel(status)} ({items.length})
+                </span>
+              </div>
+              {items.map((todo) => (
+                <div
+                  key={todo.id}
+                  className="px-4 py-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${getPriorityDot(todo.priority)}`} />
+                    <div className="min-w-0 flex-1">
+                      <div
+                        className={`text-sm font-medium truncate ${
+                          todo.status === TodoStatus.COMPLETED
+                            ? "line-through text-gray-400"
+                            : "text-gray-800"
+                        }`}
+                      >
+                        {todo.title}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-gray-500 uppercase">{todo.priority}</span>
+                        {todo.category && (
+                          <span className="text-[10px] text-blue-600">{todo.category.name}</span>
+                        )}
+                        {todo.tags.length > 0 && (
+                          <span className="text-[10px] text-purple-500">
+                            {todo.tags.map((t) => `#${t.name}`).join(" ")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Hoverable Day Cell ─────────────────────────────────────────
+function HoverDay({
+  day,
+  todos,
+  children,
+}: {
+  day: Date;
+  todos: Todo[];
+  children: React.ReactNode;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const cellRef = useRef<HTMLDivElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleEnter = useCallback(() => {
+    if (todos.length === 0) return;
+    timerRef.current = setTimeout(() => setShowTooltip(true), 300);
+  }, [todos.length]);
+
+  const handleLeave = useCallback(() => {
+    clearTimeout(timerRef.current);
+    // delay close so user can move to tooltip
+    timerRef.current = setTimeout(() => setShowTooltip(false), 200);
+  }, []);
+
+  return (
+    <div
+      ref={cellRef}
+      onMouseEnter={handleEnter}
+      onMouseLeave={handleLeave}
+    >
+      {children}
+      {showTooltip && todos.length > 0 && (
+        <DayTooltip
+          todos={todos}
+          day={day}
+          anchorRef={cellRef.current}
+          onClose={() => setShowTooltip(false)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -70,10 +281,7 @@ function MonthView({ todos, currentDate }: { todos: Todo[]; currentDate: Date })
     <div>
       <div className="grid grid-cols-7 border-b border-gray-200">
         {DAY_NAMES.map((name) => (
-          <div
-            key={name}
-            className="py-2 text-center text-xs font-semibold text-gray-500 uppercase"
-          >
+          <div key={name} className="py-2 text-center text-xs font-semibold text-gray-500 uppercase">
             {name}
           </div>
         ))}
@@ -85,53 +293,51 @@ function MonthView({ todos, currentDate }: { todos: Todo[]; currentDate: Date })
           const today = isToday(day);
 
           return (
-            <div
-              key={day.toISOString()}
-              className={`border border-gray-100 p-1.5 ${
-                !inMonth ? "bg-gray-50" : "bg-white"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span
-                  className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
-                    today
-                      ? "bg-blue-600 text-white"
-                      : !inMonth
-                      ? "text-gray-400"
-                      : "text-gray-700"
-                  }`}
-                >
-                  {format(day, "d")}
-                </span>
-                {dayTodos.length > 0 && (
-                  <span className="text-[10px] text-gray-400 font-medium">
-                    {dayTodos.length}
-                  </span>
-                )}
-              </div>
-              <div className="space-y-0.5 overflow-hidden">
-                {dayTodos.slice(0, 3).map((todo) => (
-                  <div
-                    key={todo.id}
-                    className={`text-[11px] px-1.5 py-0.5 rounded border truncate ${getPriorityColor(
-                      todo.priority
-                    )} ${
-                      todo.status === TodoStatus.COMPLETED
-                        ? "line-through opacity-60"
-                        : ""
+            <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
+              <div
+                className={`border border-gray-100 p-1.5 h-full transition-colors ${
+                  !inMonth ? "bg-gray-50" : "bg-white"
+                } ${dayTodos.length > 0 ? "hover:bg-blue-50/50 cursor-pointer" : ""}`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span
+                    className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
+                      today
+                        ? "bg-blue-600 text-white"
+                        : !inMonth
+                        ? "text-gray-400"
+                        : "text-gray-700"
                     }`}
-                    title={todo.title}
                   >
-                    {todo.title}
-                  </div>
-                ))}
-                {dayTodos.length > 3 && (
-                  <div className="text-[10px] text-gray-500 pl-1.5">
-                    +{dayTodos.length - 3} more
-                  </div>
-                )}
+                    {format(day, "d")}
+                  </span>
+                  {dayTodos.length > 0 && (
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {dayTodos.length}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-0.5 overflow-hidden">
+                  {dayTodos.slice(0, 3).map((todo) => (
+                    <div
+                      key={todo.id}
+                      className={`text-[11px] px-1.5 py-0.5 rounded border truncate ${getPriorityColor(
+                        todo.priority
+                      )} ${
+                        todo.status === TodoStatus.COMPLETED ? "line-through opacity-60" : ""
+                      }`}
+                    >
+                      {todo.title}
+                    </div>
+                  ))}
+                  {dayTodos.length > 3 && (
+                    <div className="text-[10px] text-gray-500 pl-1.5">
+                      +{dayTodos.length - 3} more
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+            </HoverDay>
           );
         })}
       </div>
@@ -148,51 +354,37 @@ function WeekView({ todos, currentDate }: { todos: Todo[]; currentDate: Date }) 
   }, [currentDate]);
 
   return (
-    <div>
-      <div className="grid grid-cols-7 gap-3">
-        {days.map((day) => {
-          const dayTodos = getTodosForDay(todos, day);
-          const today = isToday(day);
+    <div className="grid grid-cols-7 gap-3 p-3">
+      {days.map((day) => {
+        const dayTodos = getTodosForDay(todos, day);
+        const today = isToday(day);
 
-          return (
-            <div key={day.toISOString()} className="min-h-[300px]">
+        return (
+          <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
+            <div className={`min-h-[280px] ${dayTodos.length > 0 ? "cursor-pointer" : ""}`}>
               <div
                 className={`text-center py-3 rounded-t-lg ${
-                  today
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700"
+                  today ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"
                 }`}
               >
-                <div className="text-xs font-semibold uppercase">
-                  {format(day, "EEE")}
-                </div>
+                <div className="text-xs font-semibold uppercase">{format(day, "EEE")}</div>
                 <div className="text-lg font-bold">{format(day, "d")}</div>
               </div>
-              <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg p-2 space-y-2 min-h-[250px]">
+              <div className="bg-white border border-gray-200 border-t-0 rounded-b-lg p-2 space-y-2 min-h-[220px]">
                 {dayTodos.length > 0 ? (
                   dayTodos.map((todo) => (
                     <div
                       key={todo.id}
-                      className={`p-2 rounded-lg border ${getPriorityColor(
-                        todo.priority
-                      )} ${
-                        todo.status === TodoStatus.COMPLETED
-                          ? "line-through opacity-60"
-                          : ""
+                      className={`p-2 rounded-lg border ${getPriorityColor(todo.priority)} ${
+                        todo.status === TodoStatus.COMPLETED ? "line-through opacity-60" : ""
                       }`}
                     >
-                      <div className="text-xs font-semibold truncate">
-                        {todo.title}
-                      </div>
+                      <div className="text-xs font-semibold truncate">{todo.title}</div>
                       {todo.description && (
-                        <div className="text-[10px] mt-0.5 opacity-75 truncate">
-                          {todo.description}
-                        </div>
+                        <div className="text-[10px] mt-0.5 opacity-75 truncate">{todo.description}</div>
                       )}
                       <div className="flex items-center gap-1 mt-1">
-                        <span className="text-[10px] font-medium uppercase">
-                          {todo.priority}
-                        </span>
+                        <span className="text-[10px] font-medium uppercase">{todo.priority}</span>
                         {todo.category && (
                           <span className="text-[10px] bg-blue-50 text-blue-600 px-1 rounded">
                             {todo.category.name}
@@ -202,15 +394,13 @@ function WeekView({ todos, currentDate }: { todos: Todo[]; currentDate: Date }) 
                     </div>
                   ))
                 ) : (
-                  <div className="text-xs text-gray-400 text-center pt-4">
-                    No tasks
-                  </div>
+                  <div className="text-xs text-gray-400 text-center pt-4">No tasks</div>
                 )}
               </div>
             </div>
-          );
-        })}
-      </div>
+          </HoverDay>
+        );
+      })}
     </div>
   );
 }
@@ -232,7 +422,7 @@ function YearView({
   }, [currentDate]);
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
       {months.map((month) => {
         const monthStart = startOfMonth(month);
         const monthEnd = endOfMonth(month);
@@ -241,9 +431,7 @@ function YearView({
         const days = eachDayOfInterval({ start: calStart, end: calEnd });
 
         const monthTodos = todos.filter(
-          (todo) =>
-            todo.due_date &&
-            isSameMonth(parseISO(todo.due_date), month)
+          (todo) => todo.due_date && isSameMonth(parseISO(todo.due_date), month)
         );
 
         return (
@@ -253,9 +441,7 @@ function YearView({
             onClick={() => onMonthClick(month)}
           >
             <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-bold text-gray-800">
-                {format(month, "MMMM")}
-              </h3>
+              <h3 className="text-sm font-bold text-gray-800">{format(month, "MMMM")}</h3>
               {monthTodos.length > 0 && (
                 <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium">
                   {monthTodos.length}
@@ -264,10 +450,7 @@ function YearView({
             </div>
             <div className="grid grid-cols-7 gap-0.5">
               {DAY_NAMES.map((name) => (
-                <div
-                  key={name}
-                  className="text-[9px] text-gray-400 text-center font-medium"
-                >
+                <div key={name} className="text-[9px] text-gray-400 text-center font-medium">
                   {name.charAt(0)}
                 </div>
               ))}
@@ -275,36 +458,31 @@ function YearView({
                 const dayTodos = getTodosForDay(todos, day);
                 const inMonth = isSameMonth(day, month);
                 const today = isToday(day);
-                const hasHigh = dayTodos.some(
-                  (t) => t.priority === TodoPriority.HIGH
-                );
+                const hasHigh = dayTodos.some((t) => t.priority === TodoPriority.HIGH);
                 const hasTasks = dayTodos.length > 0;
 
                 return (
-                  <div
-                    key={day.toISOString()}
-                    className="flex items-center justify-center h-5"
-                  >
-                    {inMonth ? (
-                      <span
-                        className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] ${
-                          today
-                            ? "bg-blue-600 text-white font-bold"
-                            : hasTasks
-                            ? hasHigh
-                              ? "bg-red-100 text-red-700 font-semibold"
-                              : "bg-blue-100 text-blue-700 font-semibold"
-                            : "text-gray-600"
-                        }`}
-                      >
-                        {format(day, "d")}
-                      </span>
-                    ) : (
-                      <span className="text-[9px] text-gray-300">
-                        {format(day, "d")}
-                      </span>
-                    )}
-                  </div>
+                  <HoverDay key={day.toISOString()} day={day} todos={dayTodos}>
+                    <div className="flex items-center justify-center h-5">
+                      {inMonth ? (
+                        <span
+                          className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] ${
+                            today
+                              ? "bg-blue-600 text-white font-bold"
+                              : hasTasks
+                              ? hasHigh
+                                ? "bg-red-100 text-red-700 font-semibold"
+                                : "bg-blue-100 text-blue-700 font-semibold"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {format(day, "d")}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] text-gray-300">{format(day, "d")}</span>
+                      )}
+                    </div>
+                  </HoverDay>
                 );
               })}
             </div>
@@ -400,19 +578,11 @@ export default function Calendar({
       </div>
 
       {/* Calendar Body */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {view === "month" && (
-          <MonthView todos={todos} currentDate={currentDate} />
-        )}
-        {view === "week" && (
-          <WeekView todos={todos} currentDate={currentDate} />
-        )}
+      <div className="bg-white rounded-lg shadow overflow-visible">
+        {view === "month" && <MonthView todos={todos} currentDate={currentDate} />}
+        {view === "week" && <WeekView todos={todos} currentDate={currentDate} />}
         {view === "year" && (
-          <YearView
-            todos={todos}
-            currentDate={currentDate}
-            onMonthClick={handleMonthClick}
-          />
+          <YearView todos={todos} currentDate={currentDate} onMonthClick={handleMonthClick} />
         )}
       </div>
     </div>
