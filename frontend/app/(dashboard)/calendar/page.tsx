@@ -24,8 +24,7 @@ export default function CalendarPage() {
         sort_order: "asc",
       }),
     enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
   });
 
   const todos = useMemo(() => todoData?.items || [], [todoData]);
